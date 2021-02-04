@@ -45,20 +45,28 @@ let canvas = {
 
 // Создать текущую рабочую область
 function screen() {
-    
+
     let id = arguments.length == 0 ? "canvas" : arguments[0];
     let el = document.getElementById(id);
-    
+
     canvas.element = el;
     canvas.context = el.getContext('2d');
     canvas.width   = el.width;
     canvas.height  = el.height;
     canvas.img     = canvas.context.getImageData(0, 0, el.width, el.height);
-    
+
+    cls(0);
     refresh();
-    
+
     // В случае необходимости использовать factor
     return function(e) { canvas.factor = e; }
+}
+
+function cls(cl) {
+
+    for (let y = 0; y < canvas.height; y++)
+    for (let x = 0; x < canvas.width;  x++)
+        pset(x, y, cl);
 }
 
 // Выгрузить данные
@@ -69,9 +77,9 @@ function dos(id) { return canvas.dos[id & 255]; }
 
 // Наблюдатель изменений в картинке
 function refresh() {
-    
+
     if (canvas.refresh) flush();
-    
+
     canvas.refresh = 0;
     setTimeout("refresh()", canvas.refresh_rate);
 }
@@ -88,18 +96,18 @@ function pset(x, y, c) {
     f = canvas.factor;
     canvas.refresh = 1;
 
-    for (let i = f*y; i < f*y + f; i++) 
+    for (let i = f*y; i < f*y + f; i++)
     for (let j = f*x; j < f*x + f; j++) {
-            
+
         if (j >= 0 && i >= 0 && j < canvas.width && i < canvas.height) {
-            
+
             let p = 4*(j + i * canvas.width);
             canvas.img.data[p    ] =  (c >> 16) & 0xff;
             canvas.img.data[p + 1] =  (c >>  8) & 0xff;
             canvas.img.data[p + 2] =  (c      ) & 0xff;
             canvas.img.data[p + 3] = ((c >> 24) & 0xff) ^ 0xff;
         }
-    } 
+    }
 };
 
 // Нарисовать блок на экране
@@ -146,24 +154,24 @@ function line(x1, y1, x2, y2, c) {
 
 // Создать палитру из входящего массива
 function make_palette(colors) {
-    
+
     let colortable = [];
 
     for (let m = 0; m < colors.length - 1; m++) {
 
-        let a = colors[m]; 
+        let a = colors[m];
         let b = colors[m + 1];
-            
+
         for (let i = a[0]; i <= b[0]; i++) {
-            
+
             let t = (i - a[0]) / (b[0] - a[0]);
-            let cr = parseInt(a[1]*(1 - t) + b[1]*t); 
-            let cg = parseInt(a[2]*(1 - t) + b[2]*t); 
-            let cb = parseInt(a[3]*(1 - t) + b[3]*t); 
-            
+            let cr = parseInt(a[1]*(1 - t) + b[1]*t);
+            let cg = parseInt(a[2]*(1 - t) + b[2]*t);
+            let cb = parseInt(a[3]*(1 - t) + b[3]*t);
+
             colortable[i] = cr*65536 + cg*256 + cb;
         }
     }
-    
+
     return colortable;
 }
