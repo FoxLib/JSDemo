@@ -1,5 +1,26 @@
 class mini3d {
 
+    constructor() {
+
+        this.width  = canvas.width  / canvas.factor;
+        this.height = canvas.height / canvas.factor;
+        this.size = this.width * this.height;
+        this.zbuf = new Float32Array(this.size);
+
+        // Расстояние допустимого Z
+        this.mindist = 0.1;
+        this.maxdist = 10000;
+    }
+
+    cls(cl) {
+
+        for (let i = 0; i < this.size; i++) {
+
+            this.zbuf[i] = this.maxdist;
+            pset(i % this.width, parseInt(i / this.width), cl);
+        }
+    }
+
     // Нарисовать объект из треугольников
     draw(camera, vertex, faces) {
 
@@ -22,8 +43,16 @@ class mini3d {
 
             let pts = [];
             let face = faces[f];
+
             for (let i = 0; i < 3; i++) {
-                pts.push( vtx[ face[i] ] );
+
+                // -- проверка пересечения z-clip
+
+                let uv = face[i + 3]; // Точка uv-маппинга
+                let vt = Object.assign({}, vtx[ face[i] ]);
+
+                [vt.u, vt.v] = uv;
+                pts.push( vt );
             }
 
             this.triangle(pts);
@@ -33,7 +62,7 @@ class mini3d {
     // Вычислить проекцию точки
     projection(a) {
 
-        let [w, h] = [canvas.width/canvas.factor, canvas.height/canvas.factor];
+        let [w, h] = [this.width, this.height];
 
         return {
             x: parseInt(w/2 + h*a.x/a.z),
@@ -44,13 +73,16 @@ class mini3d {
     // Нарисовать треугольник на экране (в pts три точки)
     triangle(pts) {
 
-        let [width, height] = [canvas.width/canvas.factor, canvas.height/canvas.factor];
+        let [width, height] = [this.width, this.height];
         let [w2, h2] = [width>>1, height>>1];
 
         // Сокращение координат
         let Ax = pts[0].pt.x, Ay = pts[0].pt.y, Az = pts[0].pt.z,
             Bx = pts[1].pt.x, By = pts[1].pt.y, Bz = pts[1].pt.z,
             Cx = pts[2].pt.x, Cy = pts[2].pt.y, Cz = pts[2].pt.z;
+
+        let u0 = pts[0].u; let u1 = pts[1].u - u0, u2 = pts[2].u - u0;
+        let v0 = pts[0].v; let v1 = pts[1].v - v0, v2 = pts[2].v - u0;
 
         // Разность между точками
         let ABx = Bx - Ax, ACx = Cx - Ax,
@@ -124,29 +156,49 @@ class mini3d {
                 let Dx = ax - w2;
                 let Dy = h2 - y;
                 let Dz = height;
+                let Pz = y*width + ax;
+
+                // Расчет координат
+                let a = Dx*A1 + Dy*A2 + Dz*A3,
+                    b = Dx*B1 + Dy*B2 + Dz*B3,
+                    D = Dx*C1 + Dy*C2 + Dz*C3;
 
                 // Отрисовка горизонтальной линии
                 for (let x = ax; x <= bx; x++) {
 
-                    // Расчет координат
-                    let u = Dx*A1 + Dy*A2 + Dz*A3,
-                        v = Dx*B1 + Dy*B2 + Dz*B3,
-                        D = Dx*C1 + Dy*C2 + Dz*C3;
-
                     if (D != 0) {
 
-                        u /= D;
-                        v /= D;
+                        let u_ = a / D,
+                            v_ = b / D;
 
-                        u = 256*(parseInt(u*255) ^ parseInt(v*255));
+                        // Сначала рассчитать точку Z
+                        let z = Az + ABz*u_ + ACz*v_;
 
-                        pset(x, y, u);
+                        // Рисовать данную точку, если она ближе
+                        if (z < this.zbuf[Pz]) {
+
+                            // Получение координаты текстуры
+                            let u = u0 + u1*u_  + u2*v_;
+                            let v = v0 + v1*u_  + v2*v_;
+
+                            // Точки текстуры
+                            u = 256*(parseInt(u*255) ^ parseInt(v*255));
+
+                            // Рисование и запись в Z-буфер
+                            pset(x, y, u);
+
+                            this.zbuf[Pz] = z;
+                        }
                     }
 
-                    Dx++;
+                    // Снижение количества вчислений
+                    a += A1;
+                    b += B1;
+                    D += C1;
+
+                    Pz++;
                 }
             }
         }
     }
-
 }
