@@ -6,8 +6,8 @@ class mini3d {
         let vtx = [];
         for (let v in vertex) {
 
-            let vi = vertex[v];
-            let vt = {x: vi.x, y: vi.y, z: vi.z};
+            // Скопировать точку
+            let vt = Object.assign({}, vertex[v]);
 
             // Матрица преобразований камеры
             vt.x += camera.x;
@@ -15,14 +15,16 @@ class mini3d {
             vt.z += camera.z;
 
             vtx[v] = this.projection(vt);
+            vtx[v].pt = {x: vt.x, y: vt.y, z: vt.z};
         }
 
         for (let f in faces) {
 
             let pts = [];
             let face = faces[f];
-            for (let i = 0; i < 3; i++)
+            for (let i = 0; i < 3; i++) {
                 pts.push( vtx[ face[i] ] );
+            }
 
             this.triangle(pts);
         }
@@ -43,6 +45,22 @@ class mini3d {
     triangle(pts) {
 
         let [width, height] = [canvas.width/canvas.factor, canvas.height/canvas.factor];
+        let [w2, h2] = [width>>1, height>>1];
+
+        // Сокращение координат
+        let Ax = pts[0].pt.x, Ay = pts[0].pt.y, Az = pts[0].pt.z,
+            Bx = pts[1].pt.x, By = pts[1].pt.y, Bz = pts[1].pt.z,
+            Cx = pts[2].pt.x, Cy = pts[2].pt.y, Cz = pts[2].pt.z;
+
+        // Разность между точками
+        let ABx = Bx - Ax, ACx = Cx - Ax,
+            ABy = By - Ay, ACy = Cy - Ay,
+            ABz = Bz - Az, ACz = Cz - Az;
+
+        // Расчет матриц
+        let A1 = ( Ay * ACz -  Az * ACy), A2 = ( Az * ACx -  Ax * ACz), A3 = ( Ax * ACy -  Ay * ACx);
+        let B1 = ( Az * ABy -  Ay * ABz), B2 = ( Ax * ABz -  Az * ABx), B3 = ( Ay * ABx -  Ax * ABy);
+        let C1 = (ABz * ACy - ABy * ACz), C2 = (ABx * ACz - ABz * ACx), C3 = (ABy * ACx - ABx * ACy);
 
         // Выстроить точки сверху вниз
         for (let i = 0; i < 3; i++)
@@ -102,9 +120,31 @@ class mini3d {
                 if (ax < 0) ax = 0;
                 if (bx >= width) bx = width - 1;
 
+                // Проекционный луч
+                let Dx = ax - w2;
+                let Dy = h2 - y;
+                let Dz = height;
+
                 // Отрисовка горизонтальной линии
-                for (let x = ax; x <= bx; x++)
-                    pset(x, y, 0xffffff);
+                for (let x = ax; x <= bx; x++) {
+
+                    // Расчет координат
+                    let u = Dx*A1 + Dy*A2 + Dz*A3,
+                        v = Dx*B1 + Dy*B2 + Dz*B3,
+                        D = Dx*C1 + Dy*C2 + Dz*C3;
+
+                    if (D != 0) {
+
+                        u /= D;
+                        v /= D;
+
+                        u = 256*(parseInt(u*255) ^ parseInt(v*255));
+
+                        pset(x, y, u);
+                    }
+
+                    Dx++;
+                }
             }
         }
     }

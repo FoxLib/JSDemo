@@ -1,0 +1,11 @@
+html, body {
+    background: #ccc;
+    padding: 0;
+    margin: 0;
+}
+canvas {
+    width: 640px !important;
+    height: 480px  !important;
+    image-rendering: pixelated;
+    margin: 16px auto;
+}
