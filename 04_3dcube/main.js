@@ -41,9 +41,9 @@ let faces = [
 ];
 
 let camera = {
-    x: -1.5,
-    y: -1.5,
-    z: 4
+    x: -0.5,
+    y: -0.5,
+    z: 3
 };
 
 let a = (new Date()).getTime();
