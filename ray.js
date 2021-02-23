@@ -67,12 +67,19 @@ class Ray {
     // Получение параметров plane по трем точкам
     getPlaneParam(a, b, c) {
 
+        let param = arguments[3] || {};
+
+        // Есть параметр, что это plane
+        let tri   = typeof param.tri   !== 'undefined' ? param.tri : 0;
+        let color = typeof param.color !== 'undefined' ? param.color : 0xffffff;
+
         let ABx = b[0] - a[0], ACx = c[0] - a[0],
             ABy = b[1] - a[1], ACy = c[1] - a[1],
             ABz = b[2] - a[2], ACz = c[2] - a[2];
 
         // Рассчитываем коэффициенты
         return {
+            type: "plane",
             A1: (a[1]*ACz - a[2]*ACy),
             A2: (a[2]*ACx - a[0]*ACz),
             A3: (a[0]*ACy - a[1]*ACx),
@@ -85,9 +92,29 @@ class Ray {
             D1: (ACy*ABz - ABy*ACz),
             D2: (ABx*ACz - ACx*ABz),
             D3: (ACx*ABy - ABx*ACy),
+            // Источник
             a: a,
             b: b,
-            c: c
+            c: c,
+            tri: tri,
+            color: color
+        };
+    }
+
+    // Получение параметров сферы
+    getSphereParam(origin, radius) {
+
+        let param = arguments[2] || {};
+        let color = typeof param.plane !== 'undefined' ? param.color : 0xffffff;
+
+        return {
+
+            type:       "sphere",
+            origin:     {x: origin[0], y: origin[1], z: origin[2]},
+            radius:     radius,
+            color:      color,
+            // Источник
+            origin_src: origin
         };
     }
 
@@ -123,7 +150,6 @@ class Ray {
             if      (t[2] < 0 && t[1] > 0) t[0] = t[1];
             else if (t[1] < 0 && t[2] > 0) t[0] = t[2];
             else if (t[1] > 0 && t[2] > 0) t[0] = t[1] < t[2] ? t[1] : t[2];
-            else t[0] = 0;
 
             r.cast = m.z * t[0];
         }
@@ -132,15 +158,15 @@ class Ray {
     }
 
     // Найти точку пересечения с треугольником или плоскостью, p-параметр из getPlaneParam
-    castPlane(d, p, tri) {
+    castTri(d, p) {
 
         let r = {
             cast: 0
         };
 
-        let D = d.x*p.C1    + d.y*p.C2    + d.z*p.C3;
         let u = d.x*p.A1    + d.y*p.A2    + d.z*p.A3;
         let v = d.x*p.B1    + d.y*p.B2    + d.z*p.B3;
+        let D = d.x*p.C1    + d.y*p.C2    + d.z*p.C3;
         let t = p.a[0]*p.D1 + p.a[1]*p.D2 + p.a[2]*p.D3;
 
         if (D != 0) {
@@ -149,13 +175,43 @@ class Ray {
             v /= D;
             t /= D;
 
-            // let [x, y, z] = [t*d.x, t*d.y, t*d.z];
-
-            // Если tri=0, то вычисляет PLANE, если =1 то TRIANGLE
-            if (t > 0 && u >= 0 && v >= 0 && (tri && (u + v <= 1) || !tri && (u <= 1 && v <= 1)))
-                r.cast = t;
+            // Если плоскость задана как .tri (треугольник)
+            if (t > 0 && u >= 0 && v >= 0 && (p.tri ? (u + v <= 1) : (u <= 1 && v <= 1)))
+                r.cast = d.z * t;
         }
 
         return r;
+    }
+
+    // Рассчитать точку
+    intersectScene(D, scene) {
+
+        let arr = [];
+        for (let i in scene) {
+
+            let t = 0;
+            let ob = scene[i];
+
+            switch (ob.type) {
+
+                case "sphere":
+
+                    t = this.castSphere(D, ob.origin, ob.radius);
+                    break;
+
+                case "plane":
+
+                    t = this.castTri(D, ob);
+                    break;
+            }
+
+            if (t.cast > 0) arr.push([parseInt(i), t, ob]);
+        }
+
+        // Сортировка в порядке возрастания
+        arr.sort( (a,b) => a[1].cast > b[1].cast ? 1 : -1 );
+
+        // Выдать ближайшую точку
+        return arr.length ? {id: arr[0][0], data: arr[0][1], param: arr[0][2] } : null;
     }
 }
