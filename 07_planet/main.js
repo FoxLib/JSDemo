@@ -54,6 +54,7 @@ function update() {
                 let lno = normalize({x: sun.x - cam.x, y: sun.y - cam.y, z: sun.z - cam.z});
                     cam = normalize({x: -cam.x, y: -cam.y, z: -cam.z});
 
+                // Вычисление коэффициента отраженного света lspe
                 let refl = 2*(cam.x*c.x + cam.y*c.y + cam.z*c.z);
                 let ref  = normalize({x: c.x*refl - cam.x, y: c.y*refl - cam.y, z: c.z*refl - cam.z});
                 let lspe = ref.x*lno.x + ref.y*lno.y + ref.z*lno.z;
