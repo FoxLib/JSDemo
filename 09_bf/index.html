@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf8" />
+    <title>BF интерпретатор</title>
+    <style>body, html { font-family: Monospace; } textarea { width: 100%; box-sizing: border-box; height: 250px; }</style>
+    <script src="bf.js"></script>
+</head>
+<body onload="new bf()">
+    <textarea id="program">
+++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++
+ .>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.
+ ------.--------.>+.>.
+ </textarea>
+    <textarea id="input" placeholder="INPUT"></textarea>
+    <button id="start">START</button>
+    <button id="stop">STOP</button>
+    <pre id="console"></pre>
+</body>
+</html>
